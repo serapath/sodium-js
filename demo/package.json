@@ -1,0 +1,21 @@
+{
+  "name": "sodium-crypto-demo",
+  "private": true,
+  "description": "a browser joins hyperswarm through a dht-relay with custodial: false and talks to a native peer",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "@hyperswarm/dht-relay": "0.4.3",
+    "@hyperswarm/testnet": "^3.1.4",
+    "b4a": "^1.6.7",
+    "browserify": "^17.0.1",
+    "budo": "^11.8.4",
+    "hyperdht": "^6.34.1",
+    "hyperswarm": "^4.17.2",
+    "ws": "^8.18.0"
+  },
+  "overrides": {
+    "sodium-universal": "file:../sodium-crypto-0.1.0.tgz"
+  }
+}

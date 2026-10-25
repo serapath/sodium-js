@@ -1,0 +1,21 @@
+{
+  "name": "sodium-crypto",
+  "version": "0.1.0",
+  "description": "sodium-native in node and bare, sodium-javascript plus the missing pieces in browsers",
+  "main": "index.js",
+  "browser": "browser.js",
+  "scripts": {
+    "test": "brittle test/test.js",
+    "demo": "npm pack && cd demo && npm install && npm start"
+  },
+  "dependencies": {
+    "@geut/sodium-javascript-plus": "^0.0.6",
+    "libsodium-wrappers-sumo": "^0.8.4",
+    "sodium-javascript": "^0.8.0",
+    "sodium-native": "^5.1.0"
+  },
+  "devDependencies": {
+    "brittle": "^3.7.0"
+  },
+  "license": "MIT"
+}
