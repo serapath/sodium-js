@@ -1,5 +1,5 @@
 // the browser side: hyperswarm over the relay with custodial: false, so the browser runs the noise handshake
-// itself and the relay never gets its secret key. sodium-universal is sodium-crypto here (package.json overrides)
+// itself and the relay never gets its secret key. sodium-universal is sodium-js here (package.json overrides)
 const sodium = require('sodium-universal')
 const Hyperswarm = require('hyperswarm')
 const DHT = require('@hyperswarm/dht-relay')

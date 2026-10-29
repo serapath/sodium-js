@@ -1,7 +1,7 @@
 {
-  "name": "sodium-crypto",
+  "name": "sodium-js",
   "version": "0.1.0",
-  "description": "sodium-native in node and bare, sodium-javascript plus the missing pieces in browsers",
+  "description": "a web compatible sodium-native, sodium-javascript plus libsodium.js (wasm) for the fast and the missing parts",
   "main": "index.js",
   "browser": "browser.js",
   "scripts": {
