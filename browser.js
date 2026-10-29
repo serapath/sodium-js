@@ -1,15 +1,24 @@
 // browsers: sodium-javascript plus what it doesnt have but our p2p stack needs
 const sodium = require('sodium-javascript')
-const extend = require('@geut/sodium-javascript-plus/extend')
 const libsodium = require('libsodium-wrappers-sumo')
 const { extension_pbkdf2_sha512_async } = require('./lib/pbkdf2')
 
 let loaded = false
 
 /******************************************************************************
-  xchacha20poly1305 and kx (blind-pairing), from @geut/sodium-javascript-plus
+  xchacha20poly1305 and the kx session keys (blind-pairing), from libsodium.js,
+  so like noclamp below they need sodium.ready
 ******************************************************************************/
-extend(sodium)
+sodium.crypto_aead_xchacha20poly1305_ietf_KEYBYTES = 32
+sodium.crypto_aead_xchacha20poly1305_ietf_NPUBBYTES = 24
+sodium.crypto_aead_xchacha20poly1305_ietf_NSECBYTES = 0
+sodium.crypto_aead_xchacha20poly1305_ietf_ABYTES = 16
+sodium.crypto_kx_SESSIONKEYBYTES = 32
+sodium.crypto_stream_xor_STATEBYTES = 136
+sodium.crypto_aead_xchacha20poly1305_ietf_encrypt = crypto_aead_xchacha20poly1305_ietf_encrypt
+sodium.crypto_aead_xchacha20poly1305_ietf_decrypt = crypto_aead_xchacha20poly1305_ietf_decrypt
+sodium.crypto_kx_client_session_keys = crypto_kx_client_session_keys
+sodium.crypto_kx_server_session_keys = crypto_kx_server_session_keys
 
 /******************************************************************************
   pbkdf2 sha512 (bip39-mnemonic seeds), from the browsers web crypto
@@ -50,9 +59,40 @@ module.exports = sodium
 
 function handle_ready () { loaded = true }
 
+function check_ready () { if (!loaded) throw new Error('sodium-js is not ready yet, await sodium.ready first') }
+
 function crypto_scalarmult_ed25519_noclamp (q, n, p) {
-  if (!loaded) throw new Error('sodium-js is not ready yet, await sodium.ready first')
+  check_ready()
   q.set(libsodium.crypto_scalarmult_ed25519_noclamp(n, p))
+}
+
+function crypto_aead_xchacha20poly1305_ietf_encrypt (c, m, ad, nsec, npub, k) {
+  check_ready()
+  c.set(libsodium.crypto_aead_xchacha20poly1305_ietf_encrypt(m, ad || null, null, npub, k))
+  return m.length + sodium.crypto_aead_xchacha20poly1305_ietf_ABYTES
+}
+
+// throws if the ciphertext was changed, like sodium-native
+function crypto_aead_xchacha20poly1305_ietf_decrypt (m, nsec, c, ad, npub, k) {
+  check_ready()
+  m.set(libsodium.crypto_aead_xchacha20poly1305_ietf_decrypt(null, c, ad || null, npub, k))
+  return c.length - sodium.crypto_aead_xchacha20poly1305_ietf_ABYTES
+}
+
+function crypto_kx_client_session_keys (rx, tx, client_pk, client_sk, server_pk) {
+  check_ready()
+  set_session_keys(rx, tx, libsodium.crypto_kx_client_session_keys(client_pk, client_sk, server_pk))
+}
+
+function crypto_kx_server_session_keys (rx, tx, server_pk, server_sk, client_pk) {
+  check_ready()
+  set_session_keys(rx, tx, libsodium.crypto_kx_server_session_keys(server_pk, server_sk, client_pk))
+}
+
+// sodium-native lets rx or tx be null when only one of them is needed
+function set_session_keys (rx, tx, keys) {
+  if (rx) rx.set(keys.sharedRx)
+  if (tx) tx.set(keys.sharedTx)
 }
 
 function crypto_generichash (out, input, key) {

@@ -5,7 +5,7 @@ A web compatible version of sodium-native. Based on tweetnacl, sodium-javascript
 - node and bare get `sodium-native`, it already has everything
 - browsers get `sodium-javascript` plus the stuff our p2p stack needs that it doesnt have
   - `crypto_scalarmult_ed25519_noclamp` from libsodium.js (`libsodium-wrappers-sumo`, libsodium as wasm). noise-curve-ed needs it for the noise handshake, so a browser can do the handshake itself (dht-relay with `custodial: false`)
-  - `crypto_aead_xchacha20poly1305_ietf_*` and `crypto_kx_*` from `@geut/sodium-javascript-plus` (blind-pairing uses them)
+  - `crypto_aead_xchacha20poly1305_ietf_*` and `crypto_kx_client_session_keys` / `crypto_kx_server_session_keys` from libsodium.js too (blind-pairing uses them), so they also need `sodium.ready`
   - `extension_pbkdf2_sha512_async` for bip39-mnemonic seeds, from the browsers web crypto, so only on https or localhost. theres no pbkdf2 of our own (libsodium doesnt have one)
 - and in browsers `crypto_generichash`, `crypto_generichash_batch`, `crypto_sign_detached`, `crypto_sign_verify_detached`, `crypto_sign_keypair` and `crypto_sign_seed_keypair` go to libsodium.js once its loaded, 20x to 110x faster than sodium-javascript (see speed). before that they run on sodium-javascript, same output
 
@@ -16,7 +16,7 @@ u normally dont depend on this one directly, [sodium-crypto](https://github.com/
 "overrides": { "sodium-universal": "github:serapath/sodium-crypto" }
 ```
 
-libsodium.js loads async, so in a browser do this once before the first handshake (calling noclamp before that throws a clear error, the fast functions just stay on sodium-javascript till then)
+libsodium.js loads async, so in a browser do this once before the first handshake or pairing (calling noclamp, xchacha20poly1305 or the kx session keys before that throws a clear error, the fast functions just stay on sodium-javascript till then)
 
 ```js
 const sodium = require('sodium-universal')

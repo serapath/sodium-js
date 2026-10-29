@@ -9,7 +9,6 @@
     "demo": "npm pack && cd demo && npm install && npm start"
   },
   "dependencies": {
-    "@geut/sodium-javascript-plus": "^0.0.6",
     "libsodium-wrappers-sumo": "^0.8.4",
     "sodium-javascript": "^0.8.0",
     "sodium-native": "^5.1.0"
