@@ -5,13 +5,22 @@ const browser = require('../browser.js')
 const native = require('sodium-native')
 
 /******************************************************************************
-  crypto_scalarmult_ed25519_noclamp
+  before sodium.ready, libsodium.js isnt there yet
 ******************************************************************************/
-test('noclamp throws a clear error before sodium.ready', function (t) {
+test('before sodium.ready noclamp throws a clear error and the rest runs on sodium-javascript', function (t) {
   const q = new Uint8Array(32)
   t.exception(() => browser.crypto_scalarmult_ed25519_noclamp(q, random(32), public_key()), /await sodium.ready/)
+  const message = random(100)
+  const seed = random(32)
+  t.alike(hash(browser, message), hash(native, message), 'generichash')
+  t.alike(keypair(browser, seed), keypair(native, seed), 'seed keypair')
+  const { sk } = keypair(native, seed)
+  t.alike(sign(browser, message, sk), sign(native, message, sk), 'sign')
 })
 
+/******************************************************************************
+  crypto_scalarmult_ed25519_noclamp
+******************************************************************************/
 test('noclamp gives the same point as sodium-native, 1000 random scalars and points', async function (t) {
   await browser.ready
   let same = 0
@@ -35,6 +44,86 @@ test('noclamp refuses the identity point and a small order point, like sodium-na
   for (const p of [identity, small_order]) {
     t.exception(() => browser.crypto_scalarmult_ed25519_noclamp(new Uint8Array(32), random(32), p))
     t.exception(() => native.crypto_scalarmult_ed25519_noclamp(Buffer.alloc(32), random(32), p))
+  }
+})
+
+/******************************************************************************
+  generichash and ed25519 from libsodium.js, after sodium.ready
+******************************************************************************/
+test('generichash matches sodium-native, 16 / 32 / 64 bytes, with and without a key, empty input', async function (t) {
+  await browser.ready
+  let same = 0
+  let runs = 0
+  for (const length of [16, 32, 64]) {
+    for (const key of [null, random(32)]) {
+      for (const message of [Buffer.alloc(0), ...Array.from({ length: 100 }, () => random(Math.floor(Math.random() * 2000)))]) {
+        runs++
+        if (Buffer.compare(hash(browser, message, length, key), hash(native, message, length, key)) === 0) same++
+      }
+    }
+  }
+  t.is(same, runs)
+})
+
+test('generichash_batch matches sodium-native, with and without a key', async function (t) {
+  await browser.ready
+  let same = 0
+  for (let i = 0; i < 200; i++) {
+    const inputs = Array.from({ length: 1 + (i % 5) }, () => random(Math.floor(Math.random() * 300)))
+    const key = i % 2 ? random(32) : undefined
+    const a = Buffer.alloc(32)
+    const b = Buffer.alloc(32)
+    browser.crypto_generichash_batch(a, inputs, key)
+    native.crypto_generichash_batch(b, inputs, key)
+    if (Buffer.compare(a, b) === 0) same++
+  }
+  t.is(same, 200)
+})
+
+test('seed keypair and sign match sodium-native, 200 random seeds and messages', async function (t) {
+  await browser.ready
+  let same = 0
+  for (let i = 0; i < 200; i++) {
+    const seed = random(32)
+    const message = random(Math.floor(Math.random() * 2000))
+    const a = keypair(browser, seed)
+    const b = keypair(native, seed)
+    if (Buffer.compare(a.pk, b.pk) === 0 && Buffer.compare(a.sk, b.sk) === 0 &&
+      Buffer.compare(sign(browser, message, a.sk), sign(native, message, b.sk)) === 0) same++
+  }
+  t.is(same, 200)
+})
+
+test('a random keypair from libsodium.js works with sodium-native', async function (t) {
+  await browser.ready
+  const pk = Buffer.alloc(32)
+  const sk = Buffer.alloc(64)
+  browser.crypto_sign_keypair(pk, sk)
+  const from_sk = Buffer.alloc(32)
+  native.crypto_sign_ed25519_sk_to_pk(from_sk, sk)
+  t.alike(from_sk, pk, 'public key belongs to the secret key')
+  const message = random(100)
+  t.ok(native.crypto_sign_verify_detached(sign(browser, message, sk), message, pk), 'sodium-native verifies its signature')
+})
+
+test('verify gives the same answer as sodium-native, also for a wrong signature, a bad public key and wrong lengths', async function (t) {
+  await browser.ready
+  const { pk, sk } = keypair(native, random(32))
+  const message = random(100)
+  const sig = sign(native, message, sk)
+  const flipped = Buffer.from(sig)
+  flipped[0] ^= 1
+  const cases = {
+    valid: [sig, message, pk],
+    'wrong signature': [flipped, message, pk],
+    'other message': [sig, random(100), pk],
+    'random public key': [sig, message, random(32)],
+    'zero public key': [sig, message, Buffer.alloc(32)],
+    'short signature': [sig.subarray(0, 63), message, pk],
+    'short public key': [sig, message, pk.subarray(0, 31)]
+  }
+  for (const [name, args] of Object.entries(cases)) {
+    t.is(outcome(() => browser.crypto_sign_verify_detached(...args)), outcome(() => native.crypto_sign_verify_detached(...args)), name)
   }
 })
 
@@ -98,8 +187,33 @@ test('kx session keys match sodium-native', function (t) {
 })
 
 function random (n) { return crypto.randomBytes(n) }
+
 function public_key () {
   const pk = Buffer.alloc(32)
   native.crypto_sign_keypair(pk, Buffer.alloc(64))
   return pk
+}
+
+function hash (sodium, message, length = 32, key) {
+  const out = Buffer.alloc(length)
+  sodium.crypto_generichash(out, message, key)
+  return out
+}
+
+function keypair (sodium, seed) {
+  const pk = Buffer.alloc(32)
+  const sk = Buffer.alloc(64)
+  sodium.crypto_sign_seed_keypair(pk, sk, seed)
+  return { pk, sk }
+}
+
+function sign (sodium, message, sk) {
+  const sig = Buffer.alloc(64)
+  sodium.crypto_sign_detached(sig, message, sk)
+  return sig
+}
+
+// what a call gives back, or 'threw', so two libraries can be compared on bad input too
+function outcome (fn) {
+  try { return fn() } catch { return 'threw' }
 }
