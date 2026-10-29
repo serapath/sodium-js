@@ -12,7 +12,7 @@ let loaded = false
 extend(sodium)
 
 /******************************************************************************
-  pbkdf2 sha512 (bip39-mnemonic seeds), web crypto with a js fallback
+  pbkdf2 sha512 (bip39-mnemonic seeds), from the browsers web crypto
 ******************************************************************************/
 sodium.extension_pbkdf2_sha512_async = extension_pbkdf2_sha512_async
 

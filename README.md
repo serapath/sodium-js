@@ -6,7 +6,7 @@ A web compatible version of sodium-native. Based on tweetnacl, sodium-javascript
 - browsers get `sodium-js` plus the stuff our p2p stack needs that it doesnt have
   - `crypto_scalarmult_ed25519_noclamp` from libsodium.js (`libsodium-wrappers-sumo`, libsodium as wasm). noise-curve-ed needs it for the noise handshake, so a browser can do the handshake itself (dht-relay with `custodial: false`)
   - `crypto_aead_xchacha20poly1305_ietf_*` and `crypto_kx_*` from `@geut/sodium-javascript-plus` (blind-pairing uses them)
-  - `extension_pbkdf2_sha512_async` for bip39-mnemonic seeds, web crypto or hmac over sodium-javascript's sha512
+  - `extension_pbkdf2_sha512_async` for bip39-mnemonic seeds, from the browsers web crypto, so only on https or localhost. theres no pbkdf2 of our own (libsodium doesnt have one)
 
 ## how to use it
 put this in your package.json so every `sodium-crypto` in the tree is this package

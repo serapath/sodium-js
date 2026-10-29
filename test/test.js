@@ -3,7 +3,6 @@ const test = require('brittle')
 const crypto = require('crypto')
 const browser = require('../browser.js')
 const native = require('sodium-native')
-const { pbkdf2_js } = require('../lib/pbkdf2')
 
 /******************************************************************************
   crypto_scalarmult_ed25519_noclamp
@@ -42,7 +41,7 @@ test('noclamp refuses the identity point and a small order point, like sodium-na
 /******************************************************************************
   extension_pbkdf2_sha512_async
 ******************************************************************************/
-test('pbkdf2 (web crypto and the js fallback) matches sodium-native and node crypto', async function (t) {
+test('pbkdf2 (web crypto) matches sodium-native and node crypto', async function (t) {
   const cases = [
     { password: Buffer.from('abandon '.repeat(23) + 'art'), salt: Buffer.from('mnemonic'), iterations: 2048, keylen: 64 }, // bip39
     { password: random(200), salt: random(16), iterations: 3, keylen: 100 }, // long password, 2 blocks
@@ -53,10 +52,18 @@ test('pbkdf2 (web crypto and the js fallback) matches sodium-native and node cry
     const nat = Buffer.alloc(keylen)
     await native.extension_pbkdf2_sha512_async(nat, password, salt, iterations, keylen)
     const web = await browser.extension_pbkdf2_sha512_async(new Uint8Array(keylen), password, salt, iterations, keylen)
-    const js = pbkdf2_js(new Uint8Array(keylen), password, salt, iterations, keylen)
     t.alike(nat, want, 'sodium-native = node crypto, keylen ' + keylen)
-    t.alike(Buffer.from(web), want, 'web crypto path, keylen ' + keylen)
-    t.alike(Buffer.from(js), want, 'js fallback, keylen ' + keylen)
+    t.alike(Buffer.from(web), want, 'web crypto, keylen ' + keylen)
+  }
+})
+
+test('pbkdf2 throws a clear error without web crypto (a page that isnt https or localhost)', async function (t) {
+  const original = Object.getOwnPropertyDescriptor(globalThis, 'crypto')
+  Object.defineProperty(globalThis, 'crypto', { value: undefined, configurable: true })
+  try {
+    await t.exception(browser.extension_pbkdf2_sha512_async(new Uint8Array(64), random(10), random(8), 1, 64), /web crypto/)
+  } finally {
+    Object.defineProperty(globalThis, 'crypto', original)
   }
 })
 
