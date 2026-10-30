@@ -1,5 +1,5 @@
 {
-  "name": "sodium-crypto-demo",
+  "name": "sodium-js-demo",
   "private": true,
   "description": "a browser joins hyperswarm through a dht-relay with custodial: false and talks to a native peer",
   "scripts": {
@@ -16,6 +16,6 @@
     "ws": "^8.18.0"
   },
   "overrides": {
-    "sodium-universal": "file:../sodium-crypto-0.1.0.tgz"
+    "sodium-universal": "file:../sodium-js-0.1.0.tgz"
   }
 }
