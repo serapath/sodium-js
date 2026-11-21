@@ -31,7 +31,9 @@ async function start () {
 
   // browserify 17 cant parse libsodium-sumo.js (es2021 syntax), so it goes in unparsed
   const libsodium_sumo = require.resolve('libsodium-sumo', { paths: [require.resolve('libsodium-wrappers-sumo')] })
-  const server = budo(path.join(__dirname, 'page.js') + ':bundle.js', { port: PAGE_PORT, dir: __dirname, browserify: { noParse: [libsodium_sumo] } })
+  // every require('sodium-universal') in the page bundle (also inside hyperswarm and dht-relay) gets sodium-js from this repo
+  const sodium_js = b => b.require(path.join(__dirname, '..', 'browser.js'), { expose: 'sodium-universal' })
+  const server = budo(path.join(__dirname, 'page.js') + ':bundle.js', { port: PAGE_PORT, dir: __dirname, browserify: { noParse: [libsodium_sumo], plugin: [sodium_js] } })
   await new Promise(resolve => server.on('connect', resolve))
   const url = `http://localhost:${PAGE_PORT}/?relay=ws://localhost:${RELAY_PORT}&topic=${topic}`
   return { url, close }

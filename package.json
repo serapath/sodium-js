@@ -6,7 +6,7 @@
   "browser": "browser.js",
   "scripts": {
     "test": "brittle test/test.js",
-    "demo": "npm pack && cd demo && npm install && npm start"
+    "demo": "npm install && cd demo && npm install && npm start"
   },
   "dependencies": {
     "libsodium-wrappers-sumo": "^0.8.4",

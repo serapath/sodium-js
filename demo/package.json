@@ -14,8 +14,5 @@
     "hyperdht": "^6.34.1",
     "hyperswarm": "^4.17.2",
     "ws": "^8.18.0"
-  },
-  "overrides": {
-    "sodium-universal": "file:../sodium-js-0.1.0.tgz"
   }
 }
